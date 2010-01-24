@@ -2,6 +2,7 @@
 # notes:
 # - iTunes must be running before you run this script
 # - iTunes encoder must set to 'MP3 encoder' (Preferences >> Import Settings)
+# - You will need to have the correct file permissions for copying tracks
 
 itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app/Contents/MacOS/iTunes"`
 if [ "$itunes" == "" ]
@@ -11,6 +12,8 @@ then
 fi
 
 library_overview() {
+
+	clear
 
 	echo 'Getting file list, please wait..'
 
@@ -81,6 +84,7 @@ library_overview() {
 	echo -e "$total_bitrate_320 \t320kbps"
 
 	echo
+	read
 }
 
 convert_aac() {
@@ -120,6 +124,7 @@ delete_aac() {
 		end timeout
 		' &> /dev/null
 		echo "done!"
+		read
 	fi
 }
 
@@ -160,6 +165,7 @@ delete_wav() {
 		end timeout
 		' &> /dev/null
 		echo "done!"
+		read
 	fi
 }
 
@@ -174,12 +180,12 @@ strip_comments() {
 	then
 		echo "Stripping $total_files comments in batches of $batch_amount, please wait.."
 		let batches=($total_files/$batch_amount)-1
-		#for (( batch=0; batch<=$batches; batch++ ))
-		#do
-		#	let start_batch=($batch*$batch_amount)+1
-		#	let end_batch=$start_batch+$batch_amount
-		#	let st=$batch+1
-			#echo -n -e "\rBatch $st of $batches.."
+		for (( batch=0; batch<=$batches; batch++ ))
+		do
+			let start_batch=($batch*$batch_amount)+1
+			let end_batch=$start_batch+$batch_amount
+			let st=$batch+1
+			echo -n -e "\rBatch $st of $batches.."
 			osascript <<-EOT
 			with timeout of 5 minutes
 				tell application "iTunes" 
@@ -193,12 +199,16 @@ strip_comments() {
 				end tell
 			end timeout
 			EOT
-		echo "done!"
+			echo "done!"
+		done
 	fi
 }
 
 copy_tracks() {
-	echo "This feature will copy tracks to specified location in order of genre >> artist >> album >> track"
+
+	clear
+
+	echo "This feature will copy tracks to specified location in order of \$PATH/Genre/Artist/Album/Track"
 
 	path=""
 
@@ -207,6 +217,11 @@ copy_tracks() {
 		echo -n "Enter path to copy to: "
 
 		read path
+
+		if [ ! -d "$path" ]
+		then
+			echo "invalid path!"
+		fi
 	done
 
 	echo "Copying tracks, this will take a long time.."
@@ -216,7 +231,7 @@ copy_tracks() {
 			count of tracks
 		end tell"`
 
-	echo $tracks;
+	echo
 
 	for (( c=1; c<=$tracks; c++ ))
 	do
@@ -257,25 +272,28 @@ copy_tracks() {
 
 		cd "$album_filename"
 
-		trackpath=`echo "$location" | sed 's/.*:Users/:Users/;s/:/\//g'`
+		trackpath=`echo "$location" | sed 's/^.*:Users/:Users/;s/:/\//g'`
 
-		filename=`echo "$trackpath" | sed 's/.*\\/\(.*\.mp3\)$/\1/;s/\\//|/g'`
+		filename=${trackpath##*/}
 
-		#if [ ! -f "$filename" ] 
-		#then
-			#cp "$trackpath" "$filename"
-		#fi
+		if [ ! -f "$filename" ] 
+		then
+			cp "$trackpath" "$filename"
+		fi
 
 		echo -n -e "\r$c of $tracks - $trackpath"
+
+		cd "$path"
 	done
 
 	echo
-
 	echo "All done!"
+	read
 }
 
 while :
 do
+	clear
 	cat << !
 ------
 1. Library Overview
