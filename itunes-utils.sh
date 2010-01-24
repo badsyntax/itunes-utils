@@ -1,12 +1,12 @@
 #! /bin/bash
+#
 # notes:
 # - iTunes must be running before you run this script
 # - iTunes encoder must set to 'MP3 encoder' (Preferences >> Import Settings)
 # - You will need to have the correct file permissions for copying tracks
 
 itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app/Contents/MacOS/iTunes"`
-if [ "$itunes" == "" ]
-then
+if [ "$itunes" == "" ]; then
 	echo "error: iTunes is not running"
 	exit
 fi
@@ -29,13 +29,13 @@ library_overview() {
 
 	echo -e "$total_files \tTotal files"
 
-	total_wav=`osascript -e 'tell application "iTunes" to (count(tracks whose kind contains "WAV"))'`
+	total_wav=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "WAV")'`
 	echo -e "$total_wav \tWAV"
 
-	total_aac=`osascript -e 'tell application "iTunes" to (count(tracks whose kind contains "AAC"))'`
+	total_aac=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "AAC")'`
 	echo -e "$total_aac \tAAC"
 
-	total_mpeg=`osascript -e 'tell application "iTunes" to (count(tracks whose kind contains "MPEG"))'`
+	total_mpeg=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "MPEG")'`
 	echo -e "$total_mpeg \tMPEG"
 
 	total_other=$(($total_files - $total_wav - $total_aac - $total_mpeg))
@@ -65,25 +65,26 @@ library_overview() {
 
 	echo "------"
 
-	total_bitrate_128=`osascript -e 'tell application "iTunes" to (count(tracks whose bit rate equals 128))'`
+	total_bitrate_128=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 128)'`
 	echo -e "$total_bitrate_128 \t128kbps"
 
-	total_bitrate_160=`osascript -e 'tell application "iTunes" to (count(tracks whose bit rate equals 160))'`
+	total_bitrate_160=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 160)'`
 	echo -e "$total_bitrate_160 \t160kbps"
 
-	total_bitrate_192=`osascript -e 'tell application "iTunes" to (count(tracks whose bit rate equals 192))'`
+	total_bitrate_192=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 192)'`
 	echo -e "$total_bitrate_192 \t192kbps"
 
-	total_bitrate_224=`osascript -e 'tell application "iTunes" to (count(tracks whose bit rate equals 224))'`
+	total_bitrate_224=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 224)'`
 	echo -e "$total_bitrate_224 \t224kbps"
 
-	total_bitrate_256=`osascript -e 'tell application "iTunes" to (count(tracks whose bit rate equals 256))'`
+	total_bitrate_256=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 256)'`
 	echo -e "$total_bitrate_256 \t256kbps"
 
-	total_bitrate_320=`osascript -e 'tell application "iTunes" to (count(tracks whose bit rate equals 320))'`
+	total_bitrate_320=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 320)'`
 	echo -e "$total_bitrate_320 \t320kbps"
 
-	echo
+	echo 
+	echo -n "<any key to continue>"
 	read
 }
 
@@ -92,13 +93,12 @@ convert_aac() {
 
 	read answer_convertaac
 
-	if [ $answer_convertaac == "y" ]
-	then
+	if [ $answer_convertaac == "y" ]; then
 		echo -n "Converting AAC, please wait.."
 		osascript -e '
 		with timeout of 5 minutes
 			tell application "iTunes" 
-				convert(tracks whose kind contains "AAC")
+				convert (tracks whose kind contains "AAC")
 			end tell
 		end timeout
 		' &> /dev/null
@@ -113,17 +113,18 @@ delete_aac() {
 
 	read answer_deleteaac
 	
-	if [ $answer_deleteaac == "y" ]
-	then
+	if [ $answer_deleteaac == "y" ]; then
 		echo -n "Deleting AAC, please wait.."
 		osascript -e '
 		with timeout of 5 minutes
 			tell application "iTunes" 
-				delete(tracks whose kind contains "AAC")
+				delete (tracks whose kind contains "AAC")
 			end tell
 		end timeout
 		' &> /dev/null
 		echo "done!"
+		echo 
+		echo -n "<any key to continue>"
 		read
 	fi
 }
@@ -133,13 +134,12 @@ convert_wav() {
 
 	read answer_convertwav
 
-	if [ $answer_convertwav == "y" ]
-	then
+	if [ $answer_convertwav == "y" ]; then
 		echo -n "Converting WAV, please wait.."
 		osascript -e '
 		with timeout of 5 minutes
 			tell application "iTunes"
-				convert(tracks whose kind contains "WAV")
+				convert (tracks whose kind contains "WAV")
 			end tell
 		end timeout
 		' &> /dev/null
@@ -154,17 +154,18 @@ delete_wav() {
 
 	read answer_deletewav
 
-	if [ $answer_deletewav == "y" ]
-	then
+	if [ $answer_deletewav == "y" ]; then
 		echo -n "Deleting WAV, please wait.."
 		osascript -e '
 		with timeout of 5 minutes
 			tell application "iTunes" 
-				delete(tracks whose kind contains "WAV")
+				delete (tracks whose kind contains "WAV")
 			end tell
 		end timeout
 		' &> /dev/null
 		echo "done!"
+		echo 
+		echo -n "<any key to continue>"
 		read
 	fi
 }
@@ -176,12 +177,10 @@ strip_comments() {
 
 	batch_amount=500
 
-	if [ $answer_stripcomments == "y" ]
-	then
+	if [ $answer_stripcomments == "y" ]; then
 		echo "Stripping $total_files comments in batches of $batch_amount, please wait.."
 		let batches=($total_files/$batch_amount)-1
-		for (( batch=0; batch<=$batches; batch++ ))
-		do
+		for (( batch=0; batch<=$batches; batch++ )); do
 			let start_batch=($batch*$batch_amount)+1
 			let end_batch=$start_batch+$batch_amount
 			let st=$batch+1
@@ -212,14 +211,12 @@ copy_tracks() {
 
 	path=""
 
-	while [ ! -d "$path" ]
-	do
+	while [ ! -d "$path" ];	do
 		echo -n "Enter path to copy to: "
 
 		read path
 
-		if [ ! -d "$path" ]
-		then
+		if [ ! -d "$path" ]; then
 			echo "invalid path!"
 		fi
 	done
@@ -233,8 +230,7 @@ copy_tracks() {
 
 	echo
 
-	for (( c=1; c<=$tracks; c++ ))
-	do
+	for (( c=1; c<=$tracks; c++ ));	do
 		genre=`osascript -e "
 			tell application \"iTunes\"
 				get genre of track $c
@@ -255,29 +251,24 @@ copy_tracks() {
 		cd "$path"
 
 		genre_filename=`echo "$genre" | sed 's/\\//|/g'`
-	
 		mkdir "$genre_filename" &> /dev/null
 
 		cd "$genre_filename"
 		
 		artist_filename=`echo "$artist" | sed 's/\\//|/g'`
-	
 		mkdir "$artist_filename" &> /dev/null
 		
 		cd "$artist_filename"
 		
 		album_filename=`echo "$album" | sed 's/\\//|/g'`
-		
 		mkdir "$album_filename" &> /dev/null
 
 		cd "$album_filename"
 
 		trackpath=`echo "$location" | sed 's/^.*:Users/:Users/;s/:/\//g'`
-
 		filename=${trackpath##*/}
 
-		if [ ! -f "$filename" ] 
-		then
+		if [ ! -f "$filename" ]; then
 			cp "$trackpath" "$filename"
 		fi
 
@@ -288,13 +279,15 @@ copy_tracks() {
 
 	echo
 	echo "All done!"
+	echo 
+	echo -n "<any key to continue>"
 	read
 }
 
-while :
-do
+while : ; do
 	clear
 	cat << !
+MENU
 ------
 1. Library Overview
 2. Convert AAC
