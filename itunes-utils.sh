@@ -4,7 +4,7 @@
 # - iTunes must be running before you run this script
 # - iTunes encoder must set to 'MP3 encoder' (Preferences >> Import Settings)
 # - You will need to have the correct file permissions for copying tracks
-# this script assume your itune library is at location '~/Music/iTunes/iTunes Music'
+# - this script assumes your itunes library is at location '~/Music/iTunes/iTunes Music'
 
 itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app/Contents/MacOS/iTunes"`
 if [ "$itunes" == "" ]; then
@@ -44,15 +44,15 @@ library_overview() {
 
 	total_genre=`osascript -e "
 	script o
-	   property genres : \"\"
+		property genres : \"\"
 	end script
 	tell application \"iTunes\"
-	   set o's genres to (get genre of tracks of library playlist 1)
+		set o's genres to (get genre of tracks of library playlist 1)
 	end tell
 	set genreList to {}
 	repeat with i from 1 to count o's genres
-	   set g to item i of o's genres
-	   if g is not in genreList then set end of genreList to g
+		set g to item i of o's genres
+		if g is not in genreList then set end of genreList to g
 	end repeat
 	count(genreList)"`
 
@@ -171,39 +171,6 @@ delete_wav() {
 	fi
 }
 
-strip_comments() {
-	echo -n "Strip comments? y/n "
-
-	read answer_stripcomments
-
-	batch_amount=500
-
-	if [ $answer_stripcomments == "y" ]; then
-		echo "Stripping $total_files comments in batches of $batch_amount, please wait.."
-		let batches=($total_files/$batch_amount)-1
-		for (( batch=0; batch<=$batches; batch++ )); do
-			let start_batch=($batch*$batch_amount)+1
-			let end_batch=$start_batch+$batch_amount
-			let st=$batch+1
-			echo -n -e "\rBatch $st of $batches.."
-			osascript <<-EOT
-			with timeout of 30 minutes
-				tell application "iTunes" 
-					set accumulator to do shell script "echo " without altering line endings
-					repeat with t from 1 to 1250
-						--set ln to do shell script "echo 'Track " & (location of (tracks t) as string) & "'" without altering line endings
-						set ln to do shell script "echo 'Track '" without altering line endings
-						set accumulator to accumulator & ln
-						--set comment of (tracks t) to ""
-					end repeat
-				end tell
-			end timeout
-			EOT
-			echo "done!"
-		done
-	fi
-}
-
 remove_directories() {
 
 	clear
@@ -215,10 +182,11 @@ remove_directories() {
 
 	directories=`find ~/Music/iTunes/iTunes\ Music -d -empty -maxdepth 4`
 	count_directories=`echo "$directories" | wc -l`
-	
-	echo
+	size_directories=`echo "$directories" | du -sh`
 
-	echo "found $count_directories empty directories"
+	echo 
+	
+	echo "found $count_directories empty directories using $size_directories"
 	
 	if [ $count_directories -gt 0 ]; then
 
@@ -362,10 +330,9 @@ MENU
 3. Convert WAV
 4. Delete AAC
 5. Delete WAV
-6. Strip Comments
-7. Remove empty directories
-8. Copy Tracks
-9. Exit
+6. Remove empty directories
+7. Copy Tracks
+8. Exit
 ------
 !
 	echo -n "option: "
@@ -378,10 +345,9 @@ MENU
 		3) convert_wav ;;
 		4) delete_aac ;;
 		5) delete_wav ;;
-		6) stip_comments ;;
-		7) remove_directories ;;
-		8) copy_tracks ;;
-		9) exit ;;
+		6) remove_directories ;;
+		7) copy_tracks ;;
+		8) exit ;;
 		*) sleep 1 ;;
 	esac
 done
