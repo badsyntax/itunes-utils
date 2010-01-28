@@ -4,6 +4,7 @@
 # - iTunes must be running before you run this script
 # - iTunes encoder must set to 'MP3 encoder' (Preferences >> Import Settings)
 # - You will need to have the correct file permissions for copying tracks
+# this script assume your itune library is at location '~/Music/iTunes/iTunes Music'
 
 itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app/Contents/MacOS/iTunes"`
 if [ "$itunes" == "" ]; then
@@ -210,18 +211,15 @@ remove_directories() {
 	echo "Getting directory list, please wait.."
 	
 	#diskusage=`du -sh ~/Music/iTunes/iTunes\ Music/`
-	
-	echo
-
 	#echo $diskusage
 
 	directories=`find ~/Music/iTunes/iTunes\ Music -d -empty -maxdepth 4`
 	count_directories=`echo "$directories" | wc -l`
+	
+	echo
 
 	echo "found $count_directories empty directories"
 	
-	#echo "$directories"
-
 	if [ $count_directories -gt 0 ]; then
 
 		echo 
@@ -231,15 +229,34 @@ remove_directories() {
 		read answer_deleteall
 
 		if [ $answer_deleteall == "y" ]; then
-			echo "delete all"
+			IFS=$'\n'
+			files=($directories)
+			filenum=1
+			for dir in "${files[@]}"
+			do
+				rm -r "$dir"
+				echo -n "."
+			done
+			echo "all done!"
 		else 
 		
-			echo -n "Delete one by one? [y/n]"
+			echo -n "Delete one by one? [y/n] "
 		
 			read answer_deleteone
 
 			if [ $answer_deleteone == "y" ]; then
-				echo "delete one by one"
+				IFS=$'\n'
+				files=($directories)
+				filenum=1
+				for dir in "${files[@]}"
+				do
+					echo -n "Delete $dir? [y/n] "
+					read answer_deletedir
+					if [ $answer_deletedir == "y" ]; then
+						rm -r "$dir"
+					fi
+				done
+				echo "all done!"
 			fi
 		fi
 	fi	
