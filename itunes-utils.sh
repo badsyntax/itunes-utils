@@ -21,27 +21,20 @@ library_overview() {
 	total_files=`osascript -e 'tell application "iTunes" to get count of tracks'`
 	
 	echo 
-
 	echo "------"
-
 	echo  "Library overview"
-
 	echo "------"
 
 	echo -e "$total_files \tTotal files"
 
 	total_wav=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "WAV")'`
 	echo -e "$total_wav \tWAV"
-
 	total_aac=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "AAC")'`
 	echo -e "$total_aac \tAAC"
-
 	total_mpeg=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "MPEG")'`
 	echo -e "$total_mpeg \tMPEG"
-
 	total_other=$(($total_files - $total_wav - $total_aac - $total_mpeg))
 	echo -e "$total_other \tOther"
-
 	total_genre=`osascript -e "
 	script o
 		property genres : \"\"
@@ -55,34 +48,35 @@ library_overview() {
 		if g is not in genreList then set end of genreList to g
 	end repeat
 	count(genreList)"`
-
 	echo -e "$total_genre \tGenres"
 
 	echo 
-
 	echo "------"
-
 	echo "MPEG Bitrates"
-
 	echo "------"
 
 	total_bitrate_128=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 128)'`
 	echo -e "$total_bitrate_128 \t128kbps"
-
 	total_bitrate_160=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 160)'`
 	echo -e "$total_bitrate_160 \t160kbps"
-
 	total_bitrate_192=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 192)'`
 	echo -e "$total_bitrate_192 \t192kbps"
-
 	total_bitrate_224=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 224)'`
 	echo -e "$total_bitrate_224 \t224kbps"
-
 	total_bitrate_256=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 256)'`
 	echo -e "$total_bitrate_256 \t256kbps"
-
 	total_bitrate_320=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 320)'`
 	echo -e "$total_bitrate_320 \t320kbps"
+	
+	echo 
+	echo "------"
+	echo "Library filesystem"
+	echo "------"
+
+	total_size=`du -sh ~/Music/iTunes/iTunes\ Music`
+	echo -e "$total_size"
+        directories_count=`find ~/Music/iTunes/iTunes\ Music -d -maxdepth 4 | wc -l | tr -d ' '`
+	echo -e "$directories_count \tdirectories" 
 
 	echo 
 	echo -n "<any key to continue>"
