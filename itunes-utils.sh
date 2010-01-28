@@ -96,7 +96,7 @@ convert_aac() {
 	if [ $answer_convertaac == "y" ]; then
 		echo -n "Converting AAC, please wait.."
 		osascript -e '
-		with timeout of 5 minutes
+		with timeout of 30 minutes
 			tell application "iTunes" 
 				convert (tracks whose kind contains "AAC")
 			end tell
@@ -116,7 +116,7 @@ delete_aac() {
 	if [ $answer_deleteaac == "y" ]; then
 		echo -n "Deleting AAC, please wait.."
 		osascript -e '
-		with timeout of 5 minutes
+		with timeout of 30 minutes
 			tell application "iTunes" 
 				delete (tracks whose kind contains "AAC")
 			end tell
@@ -137,7 +137,7 @@ convert_wav() {
 	if [ $answer_convertwav == "y" ]; then
 		echo -n "Converting WAV, please wait.."
 		osascript -e '
-		with timeout of 5 minutes
+		with timeout of 30 minutes
 			tell application "iTunes"
 				convert (tracks whose kind contains "WAV")
 			end tell
@@ -157,7 +157,7 @@ delete_wav() {
 	if [ $answer_deletewav == "y" ]; then
 		echo -n "Deleting WAV, please wait.."
 		osascript -e '
-		with timeout of 5 minutes
+		with timeout of 30 minutes
 			tell application "iTunes" 
 				delete (tracks whose kind contains "WAV")
 			end tell
@@ -186,7 +186,7 @@ strip_comments() {
 			let st=$batch+1
 			echo -n -e "\rBatch $st of $batches.."
 			osascript <<-EOT
-			with timeout of 5 minutes
+			with timeout of 30 minutes
 				tell application "iTunes" 
 					set accumulator to do shell script "echo " without altering line endings
 					repeat with t from 1 to 1250
@@ -203,6 +203,51 @@ strip_comments() {
 	fi
 }
 
+remove_directories() {
+
+	clear
+
+	echo "Getting directory list, please wait.."
+	
+	#diskusage=`du -sh ~/Music/iTunes/iTunes\ Music/`
+	
+	echo
+
+	#echo $diskusage
+
+	directories=`find ~/Music/iTunes/iTunes\ Music -d -empty -maxdepth 4`
+	count_directories=`echo "$directories" | wc -l`
+
+	echo "found $count_directories empty directories"
+	
+	#echo "$directories"
+
+	if [ $count_directories -gt 0 ]; then
+
+		echo 
+
+		echo -n "Delete all? [y/n]: "
+
+		read answer_deleteall
+
+		if [ $answer_deleteall == "y" ]; then
+			echo "delete all"
+		else 
+		
+			echo -n "Delete one by one? [y/n]"
+		
+			read answer_deleteone
+
+			if [ $answer_deleteone == "y" ]; then
+				echo "delete one by one"
+			fi
+		fi
+	fi	
+	echo 
+	echo -n "<any key to continue>"
+	read
+}
+
 copy_tracks() {
 
 	clear
@@ -210,78 +255,84 @@ copy_tracks() {
 	echo "This feature will copy tracks to specified location in order of \$PATH/Genre/Artist/Album/Track"
 
 	path=""
+	try=0
 
-	while [ ! -d "$path" ];	do
+	while [ ! -d "$path" ] && [ $try -lt 3 ]; do
 		echo -n "Enter path to copy to: "
 
 		read path
 
 		if [ ! -d "$path" ]; then
 			echo "invalid path!"
-		fi
-	done
-
-	echo "Copying tracks, this will take a long time.."
-
-	tracks=`osascript -e "
-		tell application \"iTunes\"
-			count of tracks
-		end tell"`
-
-	echo
-
-	for (( c=1; c<=$tracks; c++ ));	do
-		genre=`osascript -e "
-			tell application \"iTunes\"
-				get genre of track $c
-			end tell"`
-		artist=`osascript -e "
-			tell application \"iTunes\"
-				get artist of track $c
-			end tell"`
-		album=`osascript -e "
-			tell application \"iTunes\"
-				get album of track $c
-			end tell"`
-		location=`osascript -e "
-			tell application \"iTunes\"
-				get location of track $c
-			end tell"`
-
-		cd "$path"
-
-		genre_filename=`echo "$genre" | sed 's/\\//|/g'`
-		mkdir "$genre_filename" &> /dev/null
-
-		cd "$genre_filename"
-		
-		artist_filename=`echo "$artist" | sed 's/\\//|/g'`
-		mkdir "$artist_filename" &> /dev/null
-		
-		cd "$artist_filename"
-		
-		album_filename=`echo "$album" | sed 's/\\//|/g'`
-		mkdir "$album_filename" &> /dev/null
-
-		cd "$album_filename"
-
-		trackpath=`echo "$location" | sed 's/^.*:Users/:Users/;s/:/\//g'`
-		filename=${trackpath##*/}
-
-		if [ ! -f "$filename" ]; then
-			cp "$trackpath" "$filename"
+			try=$[ $try + 1 ]
 		fi
 
-		echo -n -e "\r$c of $tracks - $trackpath"
-
-		cd "$path"
 	done
 
-	echo
-	echo "All done!"
-	echo 
-	echo -n "<any key to continue>"
-	read
+	if [ -d "$path" ]; then
+
+		echo "Copying tracks, this will take a long time.."
+
+		tracks=`osascript -e "
+			tell application \"iTunes\"
+				count of tracks
+			end tell"`
+
+		echo
+
+		for (( c=1; c<=$tracks; c++ ));	do
+			genre=`osascript -e "
+				tell application \"iTunes\"
+					get genre of track $c
+				end tell"`
+			artist=`osascript -e "
+				tell application \"iTunes\"
+					get artist of track $c
+				end tell"`
+			album=`osascript -e "
+				tell application \"iTunes\"
+					get album of track $c
+				end tell"`
+			location=`osascript -e "
+				tell application \"iTunes\"
+					get location of track $c
+				end tell"`
+
+			cd "$path"
+
+			genre_filename=`echo "$genre" | sed 's/\\//|/g'`
+			mkdir "$genre_filename" &> /dev/null
+
+			cd "$genre_filename"
+			
+			artist_filename=`echo "$artist" | sed 's/\\//|/g'`
+			mkdir "$artist_filename" &> /dev/null
+			
+			cd "$artist_filename"
+			
+			album_filename=`echo "$album" | sed 's/\\//|/g'`
+			mkdir "$album_filename" &> /dev/null
+
+			cd "$album_filename"
+
+			trackpath=`echo "$location" | sed 's/^.*:Users/:Users/;s/:/\//g'`
+			filename=${trackpath##*/}
+
+			if [ ! -f "$filename" ]; then
+				cp "$trackpath" "$filename"
+			fi
+
+			echo -n -e "\r$c of $tracks - $trackpath"
+
+			cd "$path"
+		done
+
+		echo
+		echo "All done!"
+		echo 
+		echo -n "<any key to continue>"
+		read
+	fi
 }
 
 while : ; do
@@ -295,8 +346,9 @@ MENU
 4. Delete AAC
 5. Delete WAV
 6. Strip Comments
-7. Copy tracks
-8. Exit
+7. Remove empty directories
+8. Copy Tracks
+9. Exit
 ------
 !
 	echo -n "option: "
@@ -310,8 +362,9 @@ MENU
 		4) delete_aac ;;
 		5) delete_wav ;;
 		6) stip_comments ;;
-		7) copy_tracks ;;
-		8) exit ;;
+		7) remove_directories ;;
+		8) copy_tracks ;;
+		9) exit ;;
 		*) sleep 1 ;;
 	esac
 done

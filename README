@@ -1,4 +1,4 @@
-This bash script was built to help you manage your iTunes library.
+This small bash script was built to help you manage your iTunes library.
 
 - iTunes must be running before you run this script
 - iTunes encoder must set to 'MP3 encoder' (Preferences >> Import Settings)
@@ -11,5 +11,6 @@ Some of the features include:
 - Converting/Deleting WAV
 - Creating a backup of your itunes library
 
-The backup feature will copy your tracks into a specified directory in the order of:
-Genre/Artist/Album/Track
+The backup feature will copy your tracks into a specified directory in the order of: Genre/Artist/Album/Track
+
+All file modifications are run through iTunes using applescript.
