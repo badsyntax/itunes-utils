@@ -17,16 +17,13 @@ library_overview() {
 	clear
 
 	echo 'Getting file list, please wait..'
-
 	total_files=`osascript -e 'tell application "iTunes" to get count of tracks'`
 	
 	echo 
 	echo "------"
 	echo  "Library overview"
 	echo "------"
-
 	echo -e "$total_files \tTotal files"
-
 	total_wav=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "WAV")'`
 	echo -e "$total_wav \tWAV"
 	total_aac=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "AAC")'`
@@ -36,25 +33,24 @@ library_overview() {
 	total_other=$(($total_files - $total_wav - $total_aac - $total_mpeg))
 	echo -e "$total_other \tOther"
 	total_genre=`osascript -e "
-	script o
-		property genres : \"\"
-	end script
-	tell application \"iTunes\"
-		set o's genres to (get genre of tracks of library playlist 1)
-	end tell
-	set genreList to {}
-	repeat with i from 1 to count o's genres
-		set g to item i of o's genres
-		if g is not in genreList then set end of genreList to g
-	end repeat
-	count(genreList)"`
+		script o
+			property genres : \"\"
+		end script
+		tell application \"iTunes\"
+			set o's genres to (get genre of tracks of library playlist 1)
+		end tell
+		set genreList to {}
+		repeat with i from 1 to count o's genres
+			set g to item i of o's genres
+			if g is not in genreList then set end of genreList to g
+		end repeat
+		count(genreList)"`
 	echo -e "$total_genre \tGenres"
 
 	echo 
 	echo "------"
 	echo "MPEG Bitrates"
 	echo "------"
-
 	total_bitrate_128=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 128)'`
 	echo -e "$total_bitrate_128 \t128kbps"
 	total_bitrate_160=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 160)'`
@@ -70,9 +66,8 @@ library_overview() {
 	
 	echo 
 	echo "------"
-	echo "Library filesystem"
+	echo "Filesystem overview"
 	echo "------"
-
 	total_size=`du -sh ~/Music/iTunes/iTunes\ Music`
 	echo -e "$total_size"
         directories_count=`find ~/Music/iTunes/iTunes\ Music -d -maxdepth 4 | wc -l | tr -d ' '`
@@ -84,86 +79,102 @@ library_overview() {
 }
 
 convert_aac() {
-	echo -n "Convert AAC? y/n: "
+	echo -n "Converting AAC, please wait.."
+	osascript -e '
+	with timeout of 30 minutes
+		tell application "iTunes" 
+			set oldencoder to name of current encoder
+			set current encoder to encoder \"$1\"
+			convert (tracks whose kind contains "AAC")
+			set current encoder to encoder oldencoder
+		end tell
+	end timeout ' &> /dev/null
+	echo "done!"
 
-	read answer_convertaac
-
-	if [ $answer_convertaac == "y" ]; then
-		echo -n "Converting AAC, please wait.."
-		osascript -e '
-		with timeout of 30 minutes
-			tell application "iTunes" 
-				convert (tracks whose kind contains "AAC")
-			end tell
-		end timeout
-		' &> /dev/null
-		echo "done!"
-
-		delete_aac
-	fi
+	delete_aac
 }
 
 delete_aac() {
-	echo -n "Delete AAC? y/n: "
-
-	read answer_deleteaac
-	
-	if [ $answer_deleteaac == "y" ]; then
-		echo -n "Deleting AAC, please wait.."
-		osascript -e '
-		with timeout of 30 minutes
-			tell application "iTunes" 
-				delete (tracks whose kind contains "AAC")
-			end tell
-		end timeout
-		' &> /dev/null
-		echo "done!"
-		echo 
-		echo -n "<any key to continue>"
-		read
-	fi
+	echo -n "Deleting AAC, please wait.."
+	osascript -e '
+	with timeout of 30 minutes
+		tell application "iTunes" 
+			delete (tracks whose kind contains "AAC")
+		end tell
+	end timeout ' &> /dev/null
+	echo "done!"
+	echo 
+	echo -n "<any key to continue>"
+	read
 }
 
 convert_wav() {
-	echo -n "Convert WAV? y/n: "
+	echo -n "Converting WAV, please wait.."
+	osascript -e '
+	with timeout of 30 minutes
+		tell application "iTunes"
+			set oldencoder to name of current encoder
+			set current encoder to encoder \"$1\"
+			convert (tracks whose kind contains "WAV")
+			set current encoder to encoder oldencoder
+		end tell
+	end timeout' &> /dev/null
 
-	read answer_convertwav
+	echo "done!"
 
-	if [ $answer_convertwav == "y" ]; then
-		echo -n "Converting WAV, please wait.."
-		osascript -e '
-		with timeout of 30 minutes
-			tell application "iTunes"
-				convert (tracks whose kind contains "WAV")
-			end tell
-		end timeout
-		' &> /dev/null
-		echo "done!"
-
-		delete_wav
-	fi
+	delete_wav
 }
 
 delete_wav() {
-	echo -n "Delete WAV? y/n: "
+	echo -n "Deleting WAV, please wait.."
+	osascript -e '
+	with timeout of 30 minutes
+		tell application "iTunes" 
+			delete (tracks whose kind contains "WAV")
+		end tell
+	end timeout ' &> /dev/null
+	echo "done!"
+	echo 
+	echo -n "<any key to continue>"
+	read
+}
 
-	read answer_deletewav
+convert_tracks() {
 
-	if [ $answer_deletewav == "y" ]; then
-		echo -n "Deleting WAV, please wait.."
-		osascript -e '
-		with timeout of 30 minutes
-			tell application "iTunes" 
-				delete (tracks whose kind contains "WAV")
+	clear
+
+	echo "Check your iTunes.."
+
+	answer_type=`osascript -e '
+		tell application "iTunes"
+			set targettype to (choose from list { "WAV audio file", "AAC audio file" } with prompt "Type of track to convert:" OK button name "Choose" without multiple selections allowed and empty selection allowed) as string
+			--set targettype to (choose from list { "AIFF audio file", "WAV audio file", "Apple Lossless audio file", "MPEG audio file", "AAC audio file" } with prompt "Which kind of songs do you want to convert?" OK button name "Choose" without multiple selections allowed and empty selection allowed) as string
+			targettype
+		end tell
+		'`
+
+	if [ "$answer_type" != "false" ]; then
+
+		answer_encoder=`osascript -e "
+			tell application \"iTunes\"
+				set oldencoder to name of current encoder
+				set allencoders to name of every encoder
+				set newencoder to (choose from list allencoders with prompt \"Please Choose an encoder\" OK button name \"Choose\" without multiple selections allowed and empty selection allowed) as string
+				newencoder
 			end tell
-		end timeout
-		' &> /dev/null
-		echo "done!"
-		echo 
-		echo -n "<any key to continue>"
-		read
+			"`
+		if [ "$answer_encoder" != "false" ]; then
+			echo
+			if [ "$answer_type" == "WAV audio file" ]; then
+				convert_wav "$answer_encoder"
+			fi
+			if [ "$answer_type" == "AAC audio file" ]; then
+				convert_aac "$answer_encoder"
+			fi
+		fi
 	fi
 }
+
 
 remove_directories() {
 
@@ -171,9 +182,6 @@ remove_directories() {
 
 	echo "Getting directory list, please wait.."
 	
-	#diskusage=`du -sh ~/Music/iTunes/iTunes\ Music/`
-	#echo $diskusage
-
 	directories=`find ~/Music/iTunes/iTunes\ Music -d -empty -maxdepth 4`
 	count_directories=`echo "$directories" | wc -l`
 	size_directories=`echo "$directories" | du -sh`
@@ -281,17 +289,14 @@ copy_tracks() {
 
 			genre_filename=`echo "$genre" | sed 's/\\//|/g'`
 			mkdir "$genre_filename" &> /dev/null
-
 			cd "$genre_filename"
 			
 			artist_filename=`echo "$artist" | sed 's/\\//|/g'`
 			mkdir "$artist_filename" &> /dev/null
-			
 			cd "$artist_filename"
 			
 			album_filename=`echo "$album" | sed 's/\\//|/g'`
 			mkdir "$album_filename" &> /dev/null
-
 			cd "$album_filename"
 
 			trackpath=`echo "$location" | sed 's/^.*:Users/:Users/;s/:/\//g'`
@@ -301,7 +306,7 @@ copy_tracks() {
 				cp "$trackpath" "$filename"
 			fi
 
-			echo -n -e "\r$c of $tracks - $trackpath"
+			echo "$c of $tracks - $trackpath"
 
 			cd "$path"
 		done
@@ -320,13 +325,10 @@ while : ; do
 MENU
 ------
 1. Library Overview
-2. Convert AAC
-3. Convert WAV
-4. Delete AAC
-5. Delete WAV
-6. Remove empty directories
-7. Copy Tracks
-8. Exit
+2. Convert Tracks
+3. Copy Tracks
+4. Remove empty directories
+5. Exit
 ------
 !
 	echo -n "option: "
@@ -335,13 +337,10 @@ MENU
 
 	case $choice in
 		1) library_overview ;;
-		2) convert_aac ;;
-		3) convert_wav ;;
-		4) delete_aac ;;
-		5) delete_wav ;;
-		6) remove_directories ;;
-		7) copy_tracks ;;
-		8) exit ;;
+		2) convert_tracks ;;
+		3) copy_tracks ;;
+		4) remove_directories ;;
+		5) exit ;;
 		*) sleep 1 ;;
 	esac
 done
