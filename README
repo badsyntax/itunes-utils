@@ -1,15 +1,14 @@
 This small bash script was built to help you manage your iTunes library.
 
 - iTunes must be running before you run this script
-- iTunes encoder must set to 'MP3 encoder' (Preferences >> Import Settings)
-- You will need to have the correct file permissions for copying tracks
+- you will need to have the correct file permissions for copying tracks
 
 Some of the features include:
 
 - Viewing an overview of your library
-- Converting/Deleting AAC
-- Converting/Deleting WAV
+- Converting Tracks
 - Creating a backup of your itunes library
+- Removing empty directories
 
 The backup feature will copy your tracks into a specified directory in the order of: Genre/Artist/Album/Track
 

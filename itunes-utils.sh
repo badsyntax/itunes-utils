@@ -3,8 +3,7 @@
 # notes:
 # - iTunes must be running before you run this script
 # - iTunes encoder must set to 'MP3 encoder' (Preferences >> Import Settings)
-# - You will need to have the correct file permissions for copying tracks
-# - this script assumes your itunes library is at location '~/Music/iTunes/iTunes Music'
+# - you will need to have the correct file permissions for copying tracks
 
 itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app/Contents/MacOS/iTunes"`
 if [ "$itunes" == "" ]; then
