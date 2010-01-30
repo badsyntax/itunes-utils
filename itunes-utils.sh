@@ -265,6 +265,80 @@ copy_tracks() {
 
 		read answer_copytype
 
+		if [ $answer_copytype == "a" ]; then
+			found_artist='0'
+			try=0
+
+			while [ $found_artist == '0' ] && [ $try -lt 3 ]; do
+				echo -n "Enter artist: "
+				read answer_artist
+
+				# search for a valid artist
+				found_artist=`osascript -e "tell application \"iTunes\" to get count (tracks whose artist contains \"$answer_artist\")"`
+
+				if [ $found_artist == '0' ]; then
+					echo "artist not found!"
+					try=$[ $try + 1 ]
+				fi
+			done
+			
+			if [ $found_artist != '0' ]; then
+				# get the list of matched artists
+				artists=`osascript -e "
+					tell application \"iTunes\" 
+						script o
+							property genres : \"\"
+						end script
+						tell application \"iTunes\"
+							set o's genres to (get artist of tracks of library playlist 1 whose artist contains \"$answer_artist\")
+						end tell
+						set genreList to {}
+						repeat with i from 1 to count o's genres
+							set g to item i of o's genres
+							if g is not in genreList then set end of genreList to g
+						end repeat
+						genreList
+					end tell
+				"`
+				IFS=","
+				set -- $artists
+				artistsArr=( $artists )
+
+				echo "found ${#artistsArr[@]} matcing artists: "
+				echo
+
+				for artist in ${artistsArr[@]}; do
+					echo "$artist" | sed 's/^ //;s/ $//'
+				done
+
+				echo
+				echo -n "enter the correct artist: "
+				read answer_artist
+				echo
+				
+				ids=`osascript -e "
+					tell application \"iTunes\" 
+						script o
+							property ids : \"\"
+						end script
+						tell application \"iTunes\"
+							set o's ids to (get id of tracks of library playlist 1 whose artist contains \"$answer_artist\")
+						end tell
+						set idList to {}
+						repeat with i from 1 to count o's ids
+							set g to item i of o's ids
+							if g is not in idList then set end of idList to g
+						end repeat
+						idList
+					end tell
+				"`
+				IFS=", "
+				set -- $ids
+				id_list=( $ids )
+			fi
+
+		fi
+
 		if [ $answer_copytype == "g" ]; then
 			found_genre='0';
 			try=0
@@ -335,9 +409,6 @@ copy_tracks() {
 				set -- $ids
 				id_list=( $ids )
 			fi
-		fi
-		if [ $answer_copytype == "a" ]; then
-			echo "not implemented"
 		fi
 		if [ $answer_copytype == "A" ]; then
 			echo "copy all"
