@@ -11,6 +11,12 @@ if [ "$itunes" == "" ]; then
 	echo "error: iTunes is not running"
 	exit
 fi
+library_path=`osascript -e "
+	tell application \"iTunes\"
+		set loc to get location of track 1 of library playlist 1
+		loc
+	end tell"`
+library_path=`echo "$library_path" | sed 's/^.*:Users/:Users/;s/:/\//g;s/^\(.*iTunes Music\).*/\1/'`
 
 library_overview() {
 
@@ -68,9 +74,9 @@ library_overview() {
 	echo "------"
 	echo "Filesystem overview"
 	echo "------"
-	total_size=`du -sh ~/Music/iTunes/iTunes\ Music`
+	total_size=`du -sh "$library_path"`
 	echo -e "$total_size"
-        directories_count=`find ~/Music/iTunes/iTunes\ Music -d -maxdepth 4 | wc -l | tr -d ' '`
+        directories_count=`find "$library_path" -d -maxdepth 4 | wc -l | tr -d ' '`
 	echo -e "$directories_count \tdirectories" 
 
 	echo 
@@ -182,7 +188,7 @@ remove_directories() {
 
 	echo "Getting directory list, please wait.."
 	
-	directories=`find ~/Music/iTunes/iTunes\ Music -d -empty -maxdepth 4`
+	directories=`find "$library_path" -d -empty -maxdepth 4`
 	count_directories=`echo "$directories" | wc -l`
 	size_directories=`echo "$directories" | du -sh`
 
