@@ -1,8 +1,6 @@
 #! /bin/bash
 #
-# notes:
 # - iTunes must be running before you run this script
-# - iTunes encoder must set to 'MP3 encoder' (Preferences >> Import Settings)
 # - you will need to have the correct file permissions for copying tracks
 
 itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app/Contents/MacOS/iTunes"`
@@ -10,6 +8,7 @@ if [ "$itunes" == "" ]; then
 	echo "error: iTunes is not running"
 	exit
 fi
+
 library_path=`osascript -e "
 	tell application \"iTunes\"
 		set loc to get location of track 1 of library playlist 1
@@ -258,10 +257,73 @@ copy_tracks() {
 			echo "invalid path!"
 			try=$[ $try + 1 ]
 		fi
-
 	done
 
 	if [ -d "$path" ]; then
+
+		echo -n "Copy by [g]enre, [a]rtist, [A]ll: "
+
+		read answer_copytype
+
+		if [ $answer_copytype == "g" ]; then
+			found_genre='0';
+			try=0
+
+			while [ $found_genre == '0' ] && [ $try -lt 3 ]; do
+				echo -n "Enter genre: "
+				read answer_genre
+
+				# search for a valid genre
+				found_genre=`osascript -e "tell application \"iTunes\" to get count (tracks whose genre contains \"$answer_genre\")"`
+
+				if [ $found_genre == '0' ]; then
+					echo "genre not found!"
+					try=$[ $try + 1 ]
+				fi
+			done
+
+			if [ $found_genre != '0' ]; then
+				# get the list of matched genres
+				genres=`osascript -e "
+					tell application \"iTunes\" 
+						script o
+							property genres : \"\"
+						end script
+						tell application \"iTunes\"
+							set o's genres to (get genre of tracks of library playlist 1 whose genre contains \"$answer_genre\")
+						end tell
+						set genreList to {}
+						repeat with i from 1 to count o's genres
+							set g to item i of o's genres
+							if g is not in genreList then set end of genreList to g
+						end repeat
+						genreList
+					end tell
+				"`
+				IFS=", "
+				set -- $genres
+				genresArr=( $genres )
+
+				echo "found ${#genresArr[@]} matcing genres: "
+
+				for genre in ${genresArr[@]}; do
+					echo "$genre"
+				done
+
+				echo -n "Choose the correct genre: "
+
+				read answer_genre
+
+				# iterate through tracks whose genre is $answer_genre
+			fi
+			exit
+		fi
+		if [ $answer_copytype == "a" ]; then
+			echo "not implemented"
+		fi
+		if [ $answer_copytype == "A" ]; then
+			echo "copy all"
+		fi
 
 		echo "Copying tracks, this will take a long time.."
 
