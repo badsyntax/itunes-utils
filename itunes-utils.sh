@@ -305,18 +305,36 @@ copy_tracks() {
 				genresArr=( $genres )
 
 				echo "found ${#genresArr[@]} matcing genres: "
+				echo
 
 				for genre in ${genresArr[@]}; do
 					echo "$genre"
 				done
 
-				echo -n "Choose the correct genre: "
-
+				echo
+				echo -n "enter the correct genre: "
 				read answer_genre
-
-				# iterate through tracks whose genre is $answer_genre
+				
+				ids=`osascript -e "
+					tell application \"iTunes\" 
+						script o
+							property ids : \"\"
+						end script
+						tell application \"iTunes\"
+							set o's ids to (get id of tracks of library playlist 1 whose genre contains \"$answer_genre\")
+						end tell
+						set idList to {}
+						repeat with i from 1 to count o's ids
+							set g to item i of o's ids
+							if g is not in idList then set end of idList to g
+						end repeat
+						idList
+					end tell
+				"`
+				IFS=", "
+				set -- $ids
+				id_list=( $ids )
 			fi
-			exit
 		fi
 		if [ $answer_copytype == "a" ]; then
 			echo "not implemented"
@@ -327,29 +345,24 @@ copy_tracks() {
 
 		echo "Copying tracks, this will take a long time.."
 
-		tracks=`osascript -e "
-			tell application \"iTunes\"
-				count of tracks
-			end tell"`
+		c=1
 
-		echo
-
-		for (( c=1; c<=$tracks; c++ ));	do
+		for track_id in ${id_list[@]}; do
 			genre=`osascript -e "
 				tell application \"iTunes\"
-					get genre of track $c
+					get genre of tracks whose id equals $track_id
 				end tell"`
 			artist=`osascript -e "
 				tell application \"iTunes\"
-					get artist of track $c
+					get artist of tracks whose id equals $track_id
 				end tell"`
 			album=`osascript -e "
 				tell application \"iTunes\"
-					get album of track $c
+					get album of tracks whose id equals $track_id
 				end tell"`
 			location=`osascript -e "
 				tell application \"iTunes\"
-					get location of track $c
+					get location of tracks whose id equals $track_id
 				end tell"`
 
 			cd "$path"
@@ -373,7 +386,9 @@ copy_tracks() {
 				cp "$trackpath" "$filename"
 			fi
 
-			echo "$c of $tracks - $trackpath"
+			echo "$c of ${#id_list[@]} - $trackpath"
+			
+			c=$((c+1))
 
 			cd "$path"
 		done
