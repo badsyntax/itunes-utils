@@ -13,11 +13,44 @@ library_path=`osascript -e "
 	tell application \"iTunes\"
 		set loc to get location of track 1 of library playlist 1
 		loc
-	end tell"`
-library_path=`echo "$library_path" | sed 's/^.*:Users/:Users/;s/:/\//g;s/^\(.*iTunes Music\).*/\1/'`
+	end tell" | sed 's/^.*:Users/:Users/;s/:/\//g;s/^\(.*iTunes Music\).*/\1/'`
 
-library_overview() {
+get_tracks_count(){
+	echo `osascript -e "
+		tell application \"iTunes\"
+			if \"$1\" = \"kind\" then 
+				set c to get count (tracks of library playlist 1 whose kind contains \"$2\") 
+			end if
+			if \"$1\" = \"bitrate\" then 
+				set c to get count (tracks of library playlist 1 whose bit rate equals $2) 
+			end if
+			if \"$1\" = \"genre\" then
+				script o
+					property genres : \"\"
+				end script
+				tell application \"iTunes\"
+					if \"$2\" = \"genres\" then
+						set o's genres to (get genre of tracks of library playlist 1)
+					else
+						set o's genres to (get genre of tracks of library playlist 1 whose genre contains \"$2\")
+					end if
+				end tell
+				if \"$2\" = \"genres\" then
+					set genreList to {}
+					repeat with i from 1 to count o's genres
+						set g to item i of o's genres
+						if g is not in genreList then set end of genreList to g
+					end repeat
+					set c to count(genreList)
+				else
+					set c to count(o's genres)
+				end if
+			end if
+			c
+		end tell"`
+}
 
+library_overview(){
 	clear
 
 	echo 'Getting file list, please wait..'
@@ -28,44 +61,32 @@ library_overview() {
 	echo  "Library overview"
 	echo "------"
 	echo -e "$total_files \tTotal files"
-	total_wav=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "WAV")'`
+	total_wav="$(get_tracks_count kind WAV)"
 	echo -e "$total_wav \tWAV"
-	total_aac=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "AAC")'`
+	total_aac="$(get_tracks_count kind AAC)"
 	echo -e "$total_aac \tAAC"
-	total_mpeg=`osascript -e 'tell application "iTunes" to get count (tracks whose kind contains "MPEG")'`
+	total_mpeg="$(get_tracks_count kind MPEG)"
 	echo -e "$total_mpeg \tMPEG"
 	total_other=$(($total_files - $total_wav - $total_aac - $total_mpeg))
 	echo -e "$total_other \tOther"
-	total_genre=`osascript -e "
-		script o
-			property genres : \"\"
-		end script
-		tell application \"iTunes\"
-			set o's genres to (get genre of tracks of library playlist 1)
-		end tell
-		set genreList to {}
-		repeat with i from 1 to count o's genres
-			set g to item i of o's genres
-			if g is not in genreList then set end of genreList to g
-		end repeat
-		count(genreList)"`
+	total_genre="$(get_tracks_count genre genres)"
 	echo -e "$total_genre \tGenres"
 
 	echo 
 	echo "------"
 	echo "MPEG Bitrates"
 	echo "------"
-	total_bitrate_128=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 128)'`
+	total_bitrate_128="$(get_tracks_count bitrate 128)"
 	echo -e "$total_bitrate_128 \t128kbps"
-	total_bitrate_160=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 160)'`
+	total_bitrate_160="$(get_tracks_count bitrate 160)"
 	echo -e "$total_bitrate_160 \t160kbps"
-	total_bitrate_192=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 192)'`
+	total_bitrate_192="$(get_tracks_count bitrate 192)"
 	echo -e "$total_bitrate_192 \t192kbps"
-	total_bitrate_224=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 224)'`
+	total_bitrate_224="$(get_tracks_count bitrate 224)"
 	echo -e "$total_bitrate_224 \t224kbps"
-	total_bitrate_256=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 256)'`
+	total_bitrate_256="$(get_tracks_count bitrate 256)"
 	echo -e "$total_bitrate_256 \t256kbps"
-	total_bitrate_320=`osascript -e 'tell application "iTunes" to get count (tracks whose bit rate equals 320)'`
+	total_bitrate_320="$(get_tracks_count bitrate 320)"
 	echo -e "$total_bitrate_320 \t320kbps"
 	
 	echo 
@@ -82,7 +103,7 @@ library_overview() {
 	read
 }
 
-convert_aac() {
+convert_aac(){
 	echo -n "Converting AAC, please wait.."
 	osascript -e '
 	with timeout of 30 minutes
@@ -98,7 +119,7 @@ convert_aac() {
 	delete_aac
 }
 
-delete_aac() {
+delete_aac(){
 	echo -n "Deleting AAC, please wait.."
 	osascript -e '
 	with timeout of 30 minutes
@@ -112,7 +133,7 @@ delete_aac() {
 	read
 }
 
-convert_wav() {
+convert_wav(){
 	echo -n "Converting WAV, please wait.."
 	osascript -e '
 	with timeout of 30 minutes
@@ -129,7 +150,7 @@ convert_wav() {
 	delete_wav
 }
 
-delete_wav() {
+delete_wav(){
 	echo -n "Deleting WAV, please wait.."
 	osascript -e '
 	with timeout of 30 minutes
@@ -143,8 +164,7 @@ delete_wav() {
 	read
 }
 
-convert_tracks() {
-
+convert_tracks(){
 	clear
 
 	echo "Check your iTunes.."
@@ -152,7 +172,6 @@ convert_tracks() {
 	answer_type=`osascript -e '
 		tell application "iTunes"
 			set targettype to (choose from list { "WAV audio file", "AAC audio file" } with prompt "Type of track to convert:" OK button name "Choose" without multiple selections allowed and empty selection allowed) as string
-			--set targettype to (choose from list { "AIFF audio file", "WAV audio file", "Apple Lossless audio file", "MPEG audio file", "AAC audio file" } with prompt "Which kind of songs do you want to convert?" OK button name "Choose" without multiple selections allowed and empty selection allowed) as string
 			targettype
 		end tell
 		'`
@@ -180,8 +199,7 @@ convert_tracks() {
 }
 
 
-remove_directories() {
-
+remove_directories(){
 	clear
 
 	echo "Getting directory list, please wait.."
@@ -239,6 +257,61 @@ remove_directories() {
 	read
 }
 
+get_tracks_by() {
+	itemType=$1
+	search=$2
+	# get the list of matching items
+	items=`osascript -e "
+		tell application \"iTunes\" 
+			script o
+				property matches : \"\"
+			end script
+			if \"$itemType\" = \"artist\" then set o's matches to (get artist of tracks of library playlist 1 whose artist contains \"$search\")
+			if \"$itemType\" = \"genre\" then set o's matches to (get genre of tracks of library playlist 1 whose genre contains \"$search\")
+			set genreList to {}
+			repeat with i from 1 to count o's matches
+				set g to item i of o's matches
+				if g is not in genreList then set end of genreList to g
+			end repeat
+			genreList
+		end tell
+	"`
+	IFS=","
+	set -- $items
+	itemsArr=( $items )
+
+	echo -n "Found ${#itemsArr[@]} matcing $itemType"; echo "s: "
+	echo
+
+	for item in ${itemsArr[@]}; do
+		echo "$item" | sed 's/^ //;s/ $//'
+	done
+
+	echo
+	echo -n "enter the correct $itemType: "
+	read answer_itemtype
+	echo
+	
+	ids=`osascript -e "
+		tell application \"iTunes\" 
+			script o
+				property ids : \"\"
+			end script
+			if \"$itemType\" = \"artist\" then set o's ids to (get id of tracks of library playlist 1 whose artist equals \"$answer_itemtype\")
+			if \"$itemType\" = \"genre\" then set o's ids to (get id of tracks of library playlist 1 whose genre equals \"$answer_itemtype\")
+			set idList to {}
+			repeat with i from 1 to count o's ids
+				set g to item i of o's ids
+				if g is not in idList then set end of idList to g
+			end repeat
+			idList
+		end tell
+	"`
+	IFS=", "
+	set -- $ids
+	id_list=( $ids )
+}
+
 copy_tracks() {
 
 	clear
@@ -265,6 +338,9 @@ copy_tracks() {
 
 		read answer_copytype
 
+		id_list=''
+
+		# get tracks by artist
 		if [ $answer_copytype == "a" ]; then
 			found_artist='0'
 			try=0
@@ -283,62 +359,12 @@ copy_tracks() {
 			done
 			
 			if [ $found_artist != '0' ]; then
-				# get the list of matched artists
-				artists=`osascript -e "
-					tell application \"iTunes\" 
-						script o
-							property genres : \"\"
-						end script
-						tell application \"iTunes\"
-							set o's genres to (get artist of tracks of library playlist 1 whose artist contains \"$answer_artist\")
-						end tell
-						set genreList to {}
-						repeat with i from 1 to count o's genres
-							set g to item i of o's genres
-							if g is not in genreList then set end of genreList to g
-						end repeat
-						genreList
-					end tell
-				"`
-				IFS=","
-				set -- $artists
-				artistsArr=( $artists )
-
-				echo "found ${#artistsArr[@]} matcing artists: "
-				echo
-
-				for artist in ${artistsArr[@]}; do
-					echo "$artist" | sed 's/^ //;s/ $//'
-				done
-
-				echo
-				echo -n "enter the correct artist: "
-				read answer_artist
-				echo
-				
-				ids=`osascript -e "
-					tell application \"iTunes\" 
-						script o
-							property ids : \"\"
-						end script
-						tell application \"iTunes\"
-							set o's ids to (get id of tracks of library playlist 1 whose artist contains \"$answer_artist\")
-						end tell
-						set idList to {}
-						repeat with i from 1 to count o's ids
-							set g to item i of o's ids
-							if g is not in idList then set end of idList to g
-						end repeat
-						idList
-					end tell
-				"`
-				IFS=", "
-				set -- $ids
-				id_list=( $ids )
+				get_tracks_by "artist" "$answer_artist"
 			fi
 
 		fi
-
+		
+		# get tracks by genre
 		if [ $answer_copytype == "g" ]; then
 			found_genre='0';
 			try=0
@@ -357,118 +383,96 @@ copy_tracks() {
 			done
 
 			if [ $found_genre != '0' ]; then
-				# get the list of matched genres
-				genres=`osascript -e "
-					tell application \"iTunes\" 
-						script o
-							property genres : \"\"
-						end script
-						tell application \"iTunes\"
-							set o's genres to (get genre of tracks of library playlist 1 whose genre contains \"$answer_genre\")
-						end tell
-						set genreList to {}
-						repeat with i from 1 to count o's genres
-							set g to item i of o's genres
-							if g is not in genreList then set end of genreList to g
-						end repeat
-						genreList
-					end tell
-				"`
-				IFS=", "
-				set -- $genres
-				genresArr=( $genres )
-
-				echo "found ${#genresArr[@]} matcing genres: "
-				echo
-
-				for genre in ${genresArr[@]}; do
-					echo "$genre"
-				done
-
-				echo
-				echo -n "enter the correct genre: "
-				read answer_genre
-				
-				ids=`osascript -e "
-					tell application \"iTunes\" 
-						script o
-							property ids : \"\"
-						end script
-						tell application \"iTunes\"
-							set o's ids to (get id of tracks of library playlist 1 whose genre contains \"$answer_genre\")
-						end tell
-						set idList to {}
-						repeat with i from 1 to count o's ids
-							set g to item i of o's ids
-							if g is not in idList then set end of idList to g
-						end repeat
-						idList
-					end tell
-				"`
-				IFS=", "
-				set -- $ids
-				id_list=( $ids )
+				get_tracks_by "genre" "$answer_genre"
 			fi
 		fi
+
+		# get all tracks
 		if [ $answer_copytype == "A" ]; then
-			echo "copy all"
+			ids=`osascript -e "
+				tell application \"iTunes\" 
+					script o
+						property ids : \"\"
+					end script
+					tell application \"iTunes\"
+						set o's ids to (get id of tracks of library playlist 1)
+					end tell
+					set idList to {}
+					repeat with i from 1 to count o's ids
+						set g to item i of o's ids
+						if g is not in idList then set end of idList to g
+					end repeat
+					idList
+				end tell
+			"`
+			IFS=", "
+			set -- $ids
+			id_list=( $ids )
 		fi
 
-		echo "Copying tracks, this will take a long time.."
+		if [ $answer_copytype == "a" ] || [ $answer_copytype == "g" ] || [ $answer_copytype == "A" ]; then
 
-		c=1
+			echo "Copying tracks, this might take a long time.."
 
-		for track_id in ${id_list[@]}; do
-			genre=`osascript -e "
-				tell application \"iTunes\"
-					get genre of tracks whose id equals $track_id
-				end tell"`
-			artist=`osascript -e "
-				tell application \"iTunes\"
-					get artist of tracks whose id equals $track_id
-				end tell"`
-			album=`osascript -e "
-				tell application \"iTunes\"
-					get album of tracks whose id equals $track_id
-				end tell"`
-			location=`osascript -e "
-				tell application \"iTunes\"
-					get location of tracks whose id equals $track_id
-				end tell"`
+			c=1
 
-			cd "$path"
+			for track_id in ${id_list[@]}; do
+				
+				cd "$path"
 
-			genre_filename=`echo "$genre" | sed 's/\\//|/g'`
-			mkdir "$genre_filename" &> /dev/null
-			cd "$genre_filename"
-			
-			artist_filename=`echo "$artist" | sed 's/\\//|/g'`
-			mkdir "$artist_filename" &> /dev/null
-			cd "$artist_filename"
-			
-			album_filename=`echo "$album" | sed 's/\\//|/g'`
-			mkdir "$album_filename" &> /dev/null
-			cd "$album_filename"
+				tr=`osascript -e "
+					tell application \"iTunes\" 
+						set ge to (get genre of tracks whose id equals $track_id)
+						set ar to (get artist of tracks whose id equals $track_id)
+						set al to (get album of tracks whose id equals $track_id)
+						set lo to (get location of tracks whose id equals $track_id)
+						ge & ar & al & lo
+					end tell
+					"`
 
-			trackpath=`echo "$location" | sed 's/^.*:Users/:Users/;s/:/\//g'`
-			filename=${trackpath##*/}
+				echo "$tr"
 
-			if [ ! -f "$filename" ]; then
-				cp "$trackpath" "$filename"
-			fi
+				exit
+				IFS=", "
+				set -- $tr
+				track=( $tr )
 
-			echo "$c of ${#id_list[@]} - $trackpath"
-			
-			c=$((c+1))
+				genre_filename=`echo "${track[0]}" | sed 's/\\//|/g'`
+				mkdir "$genre_filename" &> /dev/null
+				cd "$genre_filename"
+				
+				artist_filename=`echo "${track[1]}" | sed 's/\\//|/g'`
+				mkdir "$artist_filename" &> /dev/null
+				cd "$artist_filename"
+				
+				album_filename=`echo "${track[2]}" | sed 's/\\//|/g'`
+				mkdir "$album_filename" &> /dev/null
+				cd "$album_filename"
 
-			cd "$path"
-		done
+				trackpath=`echo "${track[3]}" | sed 's/^.*:Users/:Users/;s/:/\//g'`
+				filename=${trackpath##*/}
 
-		echo
-		echo "All done!"
-		echo 
-		echo -n "<any key to continue>"
-		read
+				echo "${track[2]}"
+
+				echo "$trackpath"
+				echo "$filename"
+
+				exit
+
+				if [ ! -f "$filename" ]; then
+					cp "$trackpath" "$filename"
+				fi
+
+				echo "$c of ${#id_list[@]} - $trackpath"
+				c=$((c+1))
+			done
+
+			echo
+			echo "All done!"
+			echo 
+			echo -n "<any key to continue>"
+			read
+		fi
 	fi
 }
 
