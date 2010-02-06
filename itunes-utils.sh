@@ -329,9 +329,7 @@ get_track_info(){
 	echo "$val"
 }
 
-
 copy_tracks() {
-
 	clear
 
 	echo "This feature will copy tracks to specified location in order of \$PATH/Genre/Artist/Album/Track"
@@ -433,22 +431,18 @@ copy_tracks() {
 			echo "Copying tracks, this might take a long time.."
 
 			c=1
-
 			for track_id in ${id_list[@]}; do
 				
 				cd "$path"
 
 				genre_filename="$(get_track_info genre $track_id)"
-				mkdir "$genre_filename" &> /dev/null
-				cd "$genre_filename"
+				mkdir "$genre_filename" &> /dev/null; cd "$genre_filename"
 				
 				artist_filename="$(get_track_info artist $track_id)"
-				mkdir "$artist_filename" &> /dev/null
-				cd "$artist_filename"
+				mkdir "$artist_filename" &> /dev/null; cd "$artist_filename"
 				
 				album_filename="$(get_track_info album $track_id)"
-				mkdir "$album_filename" &> /dev/null
-				cd "$album_filename"
+				mkdir "$album_filename" &> /dev/null; cd "$album_filename"
 
 				trackpath=`echo "$(get_track_info location $track_id)" | sed 's/^.*:Users/:Users/;s/:/\//g'`
 				filename=${trackpath##*/}
@@ -470,11 +464,6 @@ copy_tracks() {
 		fi
 	fi
 }
-
-copy_tracks
-
-exit
-
 
 while : ; do
 	clear
