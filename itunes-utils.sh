@@ -1,5 +1,8 @@
 #! /bin/bash
 #
+# itunes.sh
+# @auth richard willis
+#
 # - iTunes must be running before you run this script
 # - you will need to have the correct file permissions for copying tracks
 
@@ -288,7 +291,7 @@ get_tracks_by() {
 	done
 
 	echo
-	echo -n "enter the correct $itemType: "
+	echo -n "enter the correct $itemType listed above: "
 	read answer_itemtype
 	echo
 	
@@ -311,6 +314,21 @@ get_tracks_by() {
 	set -- $ids
 	id_list=( $ids )
 }
+
+get_track_info(){
+	val=`osascript -e "
+		tell application \"iTunes\"
+			if \"$1\" = \"genre\" then set info to (get genre of tracks whose id equals $2)
+			if \"$1\" = \"artist\" then set info to (get artist of tracks whose id equals $2)
+			if \"$1\" = \"album\" then set info to (get album of tracks whose id equals $2)
+			if \"$1\" = \"location\" then set info to (get location of tracks whose id equals $2)
+			info
+		end tell" | sed 's/\\//|/g'`
+	val=${val## }
+	val=${val%% }
+	echo "$val"
+}
+
 
 copy_tracks() {
 
@@ -420,50 +438,27 @@ copy_tracks() {
 				
 				cd "$path"
 
-				tr=`osascript -e "
-					tell application \"iTunes\" 
-						set ge to (get genre of tracks whose id equals $track_id)
-						set ar to (get artist of tracks whose id equals $track_id)
-						set al to (get album of tracks whose id equals $track_id)
-						set lo to (get location of tracks whose id equals $track_id)
-						ge & ar & al & lo
-					end tell
-					"`
-
-				echo "$tr"
-
-				exit
-				IFS=", "
-				set -- $tr
-				track=( $tr )
-
-				genre_filename=`echo "${track[0]}" | sed 's/\\//|/g'`
+				genre_filename="$(get_track_info genre $track_id)"
 				mkdir "$genre_filename" &> /dev/null
 				cd "$genre_filename"
 				
-				artist_filename=`echo "${track[1]}" | sed 's/\\//|/g'`
+				artist_filename="$(get_track_info artist $track_id)"
 				mkdir "$artist_filename" &> /dev/null
 				cd "$artist_filename"
 				
-				album_filename=`echo "${track[2]}" | sed 's/\\//|/g'`
+				album_filename="$(get_track_info album $track_id)"
 				mkdir "$album_filename" &> /dev/null
 				cd "$album_filename"
 
-				trackpath=`echo "${track[3]}" | sed 's/^.*:Users/:Users/;s/:/\//g'`
+				trackpath=`echo "$(get_track_info location $track_id)" | sed 's/^.*:Users/:Users/;s/:/\//g'`
 				filename=${trackpath##*/}
-
-				echo "${track[2]}"
-
-				echo "$trackpath"
-				echo "$filename"
-
-				exit
+				
+				echo "$c of ${#id_list[@]} - $trackpath"
 
 				if [ ! -f "$filename" ]; then
 					cp "$trackpath" "$filename"
 				fi
 
-				echo "$c of ${#id_list[@]} - $trackpath"
 				c=$((c+1))
 			done
 
@@ -475,6 +470,11 @@ copy_tracks() {
 		fi
 	fi
 }
+
+copy_tracks
+
+exit
+
 
 while : ; do
 	clear
