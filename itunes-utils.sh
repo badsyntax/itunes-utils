@@ -291,7 +291,7 @@ get_tracks_by() {
 	done
 
 	echo
-	echo -n "enter the correct $itemType listed above: "
+	echo -n "Enter the correct $itemType listed above: "
 	read answer_itemtype
 	echo
 	
@@ -472,10 +472,6 @@ copy_tracks() {
 		fi
 	fi
 }
-
-copy_tracks
-
-exit
 
 while : ; do
 	clear
