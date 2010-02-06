@@ -299,9 +299,14 @@ get_tracks_by() {
 		tell application \"iTunes\" 
 			script o
 				property ids : \"\"
+				property sizes : \"\"
 			end script
-			if \"$itemType\" = \"artist\" then set o's ids to (get id of tracks of library playlist 1 whose artist equals \"$answer_itemtype\")
-			if \"$itemType\" = \"genre\" then set o's ids to (get id of tracks of library playlist 1 whose genre equals \"$answer_itemtype\")
+			if \"$itemType\" = \"artist\" then 
+				set o's ids to (get id of tracks of library playlist 1 whose artist equals \"$answer_itemtype\")
+			end if
+			if \"$itemType\" = \"genre\" then 
+				set o's ids to (get id of tracks of library playlist 1 whose genre equals \"$answer_itemtype\")
+			end if
 			set idList to {}
 			repeat with i from 1 to count o's ids
 				set g to item i of o's ids
@@ -436,13 +441,13 @@ copy_tracks() {
 				cd "$path"
 
 				genre_filename="$(get_track_info genre $track_id)"
-				mkdir "$genre_filename" &> /dev/null; cd "$genre_filename"
+				mkdir -p "$genre_filename" &> /dev/null; cd "$genre_filename"
 				
 				artist_filename="$(get_track_info artist $track_id)"
-				mkdir "$artist_filename" &> /dev/null; cd "$artist_filename"
+				mkdir -p "$artist_filename" &> /dev/null; cd "$artist_filename"
 				
 				album_filename="$(get_track_info album $track_id)"
-				mkdir "$album_filename" &> /dev/null; cd "$album_filename"
+				mkdir -p "$album_filename" &> /dev/null; cd "$album_filename"
 
 				trackpath=`echo "$(get_track_info location $track_id)" | sed 's/^.*:Users/:Users/;s/:/\//g'`
 				filename=${trackpath##*/}
