@@ -299,7 +299,6 @@ get_tracks_by() {
 		tell application \"iTunes\" 
 			script o
 				property ids : \"\"
-				property sizes : \"\"
 			end script
 			if \"$itemType\" = \"artist\" then 
 				set o's ids to (get id of tracks of library playlist 1 whose artist equals \"$answer_itemtype\")
@@ -327,6 +326,7 @@ get_track_info(){
 			if \"$1\" = \"artist\" then set info to (get artist of tracks whose id equals $2)
 			if \"$1\" = \"album\" then set info to (get album of tracks whose id equals $2)
 			if \"$1\" = \"location\" then set info to (get location of tracks whose id equals $2)
+			if \"$1\" = \"size\" then set info to (get size of tracks whose id equals $2)
 			info
 		end tell" | sed 's/\\//|/g'`
 	val=${val## }
@@ -449,10 +449,13 @@ copy_tracks() {
 				album_filename="$(get_track_info album $track_id)"
 				mkdir -p "$album_filename" &> /dev/null; cd "$album_filename"
 
+				track_size="$(get_track_info size $track_id)"
+				track_size="$((track_size/1024/1024))MB"
+
 				trackpath=`echo "$(get_track_info location $track_id)" | sed 's/^.*:Users/:Users/;s/:/\//g'`
 				filename=${trackpath##*/}
 				
-				echo "$c of ${#id_list[@]} - $trackpath"
+				echo "$c of ${#id_list[@]} - $track_size - $trackpath"
 
 				if [ ! -f "$filename" ]; then
 					cp "$trackpath" "$filename"
@@ -469,6 +472,10 @@ copy_tracks() {
 		fi
 	fi
 }
+
+copy_tracks
+
+exit
 
 while : ; do
 	clear
