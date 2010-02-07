@@ -514,10 +514,6 @@ copy_tracks() {
 	fi
 }
 
-remove_duplicates
-
-exit
-
 while : ; do
 	clear
 	cat << !
