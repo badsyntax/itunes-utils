@@ -206,42 +206,87 @@ remove_duplicates(){
 
 	echo "Check your iTunes.."
 
-	# adapted from "Corral iTunes Dupes" by Doug Adams and Charles E.M. Strauss 
-
-	tracks=`osascript -e '
+	answer_criteria=`osascript -e '
 		property path_to_xml : "~/Music/iTunes/iTunes Music Library.xml"
 		tell application "iTunes"
 			choose from list {"Name", "Artist", "Album", "Genre", "Time", "Size", "Kind", "Bit Rate"} default items {"Name", "Artist", "Album", "Genre", "Time"} with prompt "Select criteria:" with multiple selections allowed without empty selection allowed
 		end tell'`
-	echo
-	
-	echo "Searching the library, please wait.."
-	
-	tracks=`perl -e "
-		@unique_tags=('Name', 'Artist');
-		\\$/=undef;
-		\\$s=<>;
-		while(\\$s=~m:<key>(\d*)</key>(.*?)<dict>(.*?)</dict>:sg){
-			(\\$db_id,\\$dict)=(\\$1,\\$3);
-			while(\\$dict=~m:<key>(.*?)</key>(.*?)<(.*?)>(.*?)</\3>:sg){
-				\\$h{\\$db_id}->{\\$1}=\\$4;
-			}
-		};
-		@db_ids=keys %h;
-		foreach \\$db_id (@db_ids){
-			%f=%{\\$h{\\$db_id}};
-			\\$uid=join'<>',@f{@unique_tags};
-			push@{\\$uid_hash{\\$uid}},\\$db_id;
-		}
-		while((\\$uid,\\$key_list_ref)=each %uid_hash){
-			@key_list=@{\\$key_list_ref};
-			next unless@key_list>1;
-			print\"( @key_list ) \\$uid\n\";
-		}" ~/Music/iTunes/iTunes\ Music\ Library.xml`
 
-	echo "$tracks"
-	exit
-}
+	if [ "$answer_criteria" != "false" ]; then
+
+		answer_criteria=`echo "$answer_criteria" | sed "s/, /', '/g"`
+		answer_criteria="'$answer_criteria'"
+
+		echo
+		echo "Searching for duplicate tracks, please wait.."
+	
+		# adapted from "Corral iTunes Dupes" by Doug Adams and Charles E.M. Strauss 
+		tracks=`perl -e "
+			@unique_tags=($answer_criteria);
+			\\$/=undef;
+			\\$s=<>;
+			while(\\$s=~m:<key>(\d*)</key>(.*?)<dict>(.*?)</dict>:sg){
+				(\\$db_id,\\$dict)=(\\$1,\\$3);
+				while(\\$dict=~m:<key>(.*?)</key>(.*?)<(.*?)>(.*?)</\3>:sg){
+					\\$h{\\$db_id}->{\\$1}=\\$4;
+				}
+			};
+			@db_ids=keys %h;
+			foreach \\$db_id (@db_ids){
+				%f=%{\\$h{\\$db_id}};
+				\\$uid=join'<>',@f{@unique_tags};
+				push@{\\$uid_hash{\\$uid}},\\$db_id;
+			}
+			while((\\$uid,\\$key_list_ref)=each %uid_hash){
+				@key_list=@{\\$key_list_ref};
+				next unless@key_list>1;
+				print\"( @key_list )\n\";
+			}" ~/Music/iTunes/iTunes\ Music\ Library.xml`
+		tracks_count=`echo "$tracks" | wc -l | tr -d ' '`
+
+		if [ $tracks_count > 0 ]; then 
+			osascript -e '
+				tell application "iTunes"
+					activate
+						if (not (exists user playlist "Dupes")) then make new playlist with properties {name:"Dupes"}
+					try
+						delete every track of playlist "Dupes"
+					end try
+					set view of front browser window to playlist "Dupes"
+				end tell'
+			echo
+			echo -n "Adding $tracks_count tracks to \"Dupes\" playlist."
+			IFS=$'\n'
+			thetracks=($tracks)
+			for track in "${thetracks[@]}"; do
+				track_ids=`perl -e "\\$string=\"$track\";\\$string =~ s/\( (.*) \).*/\\$1/;print\"\\$string\""` &> /dev/null
+				IFS=$' '
+				theids=($track_ids)
+				for id in "${theids[@]}"; do
+					theid=`echo "$id" | sed 's/\.*//g'`
+					osascript -e "
+						set dbid to $theid as number
+						tell application \"iTunes\"
+							try 
+								duplicate (first file track of library playlist 1 whose database ID is dbid) to playlist \"Dupes\"
+							on error err_mess
+								log err_mess -- debugging
+							end try
+						end tell" &> /dev/null
+					echo -n "."
+				done
+			done
+			echo -n 'done!'
+			echo
+		else 
+			echo "No duplicate tracks found!"
+		fi
+		
+		echo 
+		echo -n "<any key to continue>"
+		read
+		fi
+}	
 
 remove_directories(){
 	clear
