@@ -11,6 +11,7 @@ Some of the features include:
   * You can copy tracks by genre, artist or all.
   * Tracks will be copied into a specified directory in the order of: Genre/Artist/Album/Track
 * Remove duplicate tracks
+  * Filter tracks by different criteria into a unique playlist where you can delete the duplicates
 * Remove empty directories
 
 
