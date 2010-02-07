@@ -174,6 +174,8 @@ convert_tracks(){
 
 	answer_type=`osascript -e '
 		tell application "iTunes"
+			activate
+			tell browser window 1 to set visible to true
 			set targettype to (choose from list { "WAV audio file", "AAC audio file" } with prompt "Type of track to convert:" OK button name "Choose" without multiple selections allowed and empty selection allowed) as string
 			targettype
 		end tell
@@ -209,7 +211,9 @@ remove_duplicates(){
 	answer_criteria=`osascript -e '
 		property path_to_xml : "~/Music/iTunes/iTunes Music Library.xml"
 		tell application "iTunes"
-			choose from list {"Name", "Artist", "Album", "Genre", "Time", "Size", "Kind", "Bit Rate"} default items {"Name", "Artist", "Album", "Genre", "Time"} with prompt "Select criteria:" with multiple selections allowed without empty selection allowed
+			activate
+			tell browser window 1 to set visible to true
+			choose from list {"Name", "Artist", "Album", "Genre", "Size", "Kind", "Bit Rate"} default items {"Name", "Artist", "Album", "Genre", "Size"} with prompt "Select criteria:" with multiple selections allowed without empty selection allowed
 		end tell'`
 
 	if [ "$answer_criteria" != "false" ]; then
@@ -255,7 +259,7 @@ remove_duplicates(){
 					set view of front browser window to playlist "Dupes"
 				end tell'
 			echo
-			echo -n "Adding $tracks_count tracks to \"Dupes\" playlist."
+			echo -n "Adding $tracks_count duplicate tracks to \"Dupes\" playlist."
 			IFS=$'\n'
 			thetracks=($tracks)
 			for track in "${thetracks[@]}"; do
@@ -277,7 +281,8 @@ remove_duplicates(){
 				done
 			done
 			echo -n 'done!'
-			echo
+			echo; echo
+			echo "You can now delete the duplicate tracks from the \"Dupes\" playlist in iTunes."
 		else 
 			echo "No duplicate tracks found!"
 		fi
