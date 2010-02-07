@@ -206,6 +206,8 @@ remove_duplicates(){
 
 	echo "Check your iTunes.."
 
+	# adapted from "Corral iTunes Dupes" by Doug Adams and Charles E.M. Strauss 
+
 	tracks=`osascript -e '
 		property path_to_xml : "~/Music/iTunes/iTunes Music Library.xml"
 		tell application "iTunes"
