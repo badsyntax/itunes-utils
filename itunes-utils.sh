@@ -98,7 +98,7 @@ library_overview(){
 	echo "------"
 	total_size=`du -sh "$library_path"`
 	echo -e "$total_size"
-        directories_count=`find "$library_path" -d -maxdepth 4 | wc -l | tr -d ' '`
+	directories_count=`find "$library_path" -d -maxdepth 4 | wc -l | tr -d ' '`
 	echo -e "$directories_count \tdirectories" 
 
 	echo 
@@ -201,6 +201,45 @@ convert_tracks(){
 	fi
 }
 
+remove_duplicates(){
+	clear
+
+	echo "Check your iTunes.."
+
+	tracks=`osascript -e '
+		property path_to_xml : "~/Music/iTunes/iTunes Music Library.xml"
+		tell application "iTunes"
+			choose from list {"Name", "Artist", "Album", "Genre", "Time", "Size", "Kind", "Bit Rate"} default items {"Name", "Artist", "Album", "Genre", "Time"} with prompt "Select criteria:" with multiple selections allowed without empty selection allowed
+		end tell'`
+	echo
+	
+	echo "Searching the library, please wait.."
+	
+	tracks=`perl -e "
+		@unique_tags=('Name', 'Artist');
+		\\$/=undef;
+		\\$s=<>;
+		while(\\$s=~m:<key>(\d*)</key>(.*?)<dict>(.*?)</dict>:sg){
+			(\\$db_id,\\$dict)=(\\$1,\\$3);
+			while(\\$dict=~m:<key>(.*?)</key>(.*?)<(.*?)>(.*?)</\3>:sg){
+				\\$h{\\$db_id}->{\\$1}=\\$4;
+			}
+		};
+		@db_ids=keys %h;
+		foreach \\$db_id (@db_ids){
+			%f=%{\\$h{\\$db_id}};
+			\\$uid=join'<>',@f{@unique_tags};
+			push@{\\$uid_hash{\\$uid}},\\$db_id;
+		}
+		while((\\$uid,\\$key_list_ref)=each %uid_hash){
+			@key_list=@{\\$key_list_ref};
+			next unless@key_list>1;
+			print\"( @key_list ) \\$uid\n\";
+		}" ~/Music/iTunes/iTunes\ Music\ Library.xml`
+
+	echo "$tracks"
+	exit
+}
 
 remove_directories(){
 	clear
@@ -450,7 +489,7 @@ copy_tracks() {
 				mkdir -p "$album_filename" &> /dev/null; cd "$album_filename"
 
 				track_size="$(get_track_info size $track_id)"
-				track_size="$((track_size/1024/1024))MB"
+				track_size="`echo \"$track_size/1024/1024\" | bc`MB"
 
 				trackpath=`echo "$(get_track_info location $track_id)" | sed 's/^.*:Users/:Users/;s/:/\//g'`
 				filename=${trackpath##*/}
@@ -473,6 +512,10 @@ copy_tracks() {
 	fi
 }
 
+remove_duplicates
+
+exit
+
 while : ; do
 	clear
 	cat << !
@@ -481,8 +524,9 @@ MENU
 1. Library Overview
 2. Convert Tracks
 3. Copy Tracks
-4. Remove empty directories
-5. Exit
+4. Remove duplicates
+5. Remove empty directories
+6. Exit
 ------
 !
 	echo -n "option: "
@@ -493,8 +537,9 @@ MENU
 		1) library_overview ;;
 		2) convert_tracks ;;
 		3) copy_tracks ;;
-		4) remove_directories ;;
-		5) exit ;;
+		4) remove_duplicates ;;
+		5) remove_directories ;;
+		6) exit ;;
 		*) sleep 1 ;;
 	esac
 done
