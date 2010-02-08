@@ -6,12 +6,15 @@
 # - iTunes must be running before you run this script
 # - you will need to have the correct file permissions for copying tracks
 
+
+# check itunes is running
 itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app/Contents/MacOS/iTunes"`
 if [ "$itunes" == "" ]; then
 	echo "error: iTunes is not running"
 	exit
 fi
 
+# find the path to library
 library_path=`osascript -e "
 	tell application \"iTunes\"
 		set loc to get location of track 1 of library playlist 1
@@ -208,6 +211,7 @@ remove_duplicates(){
 
 	echo "Check your iTunes.."
 
+	# get criteria list
 	answer_criteria=`osascript -e '
 		property path_to_xml : "~/Music/iTunes/iTunes Music Library.xml"
 		tell application "iTunes"
@@ -218,6 +222,7 @@ remove_duplicates(){
 
 	if [ "$answer_criteria" != "false" ]; then
 
+		# convert string criteria list into perl list format
 		answer_criteria=`echo "$answer_criteria" | sed "s/, /', '/g"`
 		answer_criteria="'$answer_criteria'"
 
@@ -249,21 +254,26 @@ remove_duplicates(){
 		tracks_count=`echo "$tracks" | wc -l | tr -d ' '`
 
 		if [ $tracks_count > 0 ]; then 
+			# create the 'Duplicates' playlist
 			osascript -e '
 				tell application "iTunes"
 					activate
-						if (not (exists user playlist "Dupes")) then make new playlist with properties {name:"Dupes"}
+						if (not (exists user playlist "Duplicates")) then make new playlist with properties {name:"Duplicates"}
 					try
-						delete every track of playlist "Dupes"
+						delete every track of playlist "Duplicates"
 					end try
-					set view of front browser window to playlist "Dupes"
+					set view of front browser window to playlist "Duplicates"
 				end tell'
 			echo
-			echo -n "Adding $tracks_count duplicate tracks to \"Dupes\" playlist."
+			echo -n "Adding $tracks_count duplicate tracks to \"Duplicates\" playlist."
 			IFS=$'\n'
 			thetracks=($tracks)
 			for track in "${thetracks[@]}"; do
+
+				# munge the tracks ids
 				track_ids=`perl -e "\\$string=\"$track\";\\$string =~ s/\( (.*) \).*/\\$1/;print\"\\$string\""` &> /dev/null
+				
+				# add duplicate tracks to playlist
 				IFS=$' '
 				theids=($track_ids)
 				for id in "${theids[@]}"; do
@@ -272,9 +282,7 @@ remove_duplicates(){
 						set dbid to $theid as number
 						tell application \"iTunes\"
 							try 
-								duplicate (first file track of library playlist 1 whose database ID is dbid) to playlist \"Dupes\"
-							on error err_mess
-								log err_mess -- debugging
+								duplicate (first file track of library playlist 1 whose database ID is dbid) to playlist \"Duplicates\"
 							end try
 						end tell" &> /dev/null
 					echo -n "."
@@ -282,7 +290,7 @@ remove_duplicates(){
 			done
 			echo -n 'done!'
 			echo; echo
-			echo "You can now delete the duplicate tracks from the \"Dupes\" playlist in iTunes."
+			echo "You can now delete the duplicate tracks from the \"Duplicates\" playlist in iTunes."
 		else 
 			echo "No duplicate tracks found!"
 		fi
@@ -351,17 +359,19 @@ remove_directories(){
 	read
 }
 
+# filter tracks by artist or genre
 get_tracks_by() {
 	itemType=$1
-	search=$2
-	# get the list of matching items
+
+	# get list of matching tracks
 	items=`osascript -e "
 		tell application \"iTunes\" 
 			script o
 				property matches : \"\"
 			end script
-			if \"$itemType\" = \"artist\" then set o's matches to (get artist of tracks of library playlist 1 whose artist contains \"$search\")
-			if \"$itemType\" = \"genre\" then set o's matches to (get genre of tracks of library playlist 1 whose genre contains \"$search\")
+			if \"$1\" = \"artist\" then set o's matches to (get artist of tracks of library playlist 1 whose artist contains \"$2\")
+			if \"$1\" = \"genre\" then set o's matches to (get genre of tracks of library playlist 1 whose genre contains \"$2\")
+			if \"$1\" = \"all\" then set o's matches to (get id of tracks of library playlist 1)
 			set genreList to {}
 			repeat with i from 1 to count o's matches
 				set g to item i of o's matches
@@ -386,6 +396,7 @@ get_tracks_by() {
 	read answer_itemtype
 	echo
 	
+	# build list of track ids
 	ids=`osascript -e "
 		tell application \"iTunes\" 
 			script o
@@ -501,6 +512,7 @@ copy_tracks() {
 
 		# get all tracks
 		if [ $answer_copytype == "A" ]; then
+			echo "Building track list, please wait.."
 			ids=`osascript -e "
 				tell application \"iTunes\" 
 					script o
@@ -511,12 +523,12 @@ copy_tracks() {
 					end tell
 					set idList to {}
 					repeat with i from 1 to count o's ids
-						set g to item i of o's ids
-						if g is not in idList then set end of idList to g
+						set end of idList to item i of o's ids
 					end repeat
 					idList
 				end tell
 			"`
+			echo 
 			IFS=", "
 			set -- $ids
 			id_list=( $ids )
@@ -531,6 +543,7 @@ copy_tracks() {
 				
 				cd "$path"
 
+				# create directories
 				genre_filename="$(get_track_info genre $track_id)"
 				mkdir -p "$genre_filename" &> /dev/null; cd "$genre_filename"
 				
@@ -548,6 +561,7 @@ copy_tracks() {
 				
 				echo "$c of ${#id_list[@]} - $track_size - $trackpath"
 
+				# copy track
 				if [ ! -f "$filename" ]; then
 					cp "$trackpath" "$filename"
 				fi
