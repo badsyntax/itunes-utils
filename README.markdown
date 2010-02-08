@@ -2,6 +2,7 @@ This small bash script was built to help you manage your iTunes library.
 
 * iTunes must be running before you run this script
 * you will need to have the correct file permissions for copying tracks
+* you'll need to `sudo chmod +x itunes-utils.sh` to run the script
 
 Some of the features include:
 
