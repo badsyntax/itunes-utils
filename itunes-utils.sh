@@ -2,24 +2,22 @@
 #
 # itunes.sh
 # @auth richard willis
-#
-# - iTunes must be running before you run this script
-# - you will need to have the correct file permissions for copying tracks
 
 
-# check itunes is running
-itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app/Contents/MacOS/iTunes"`
-if [ "$itunes" == "" ]; then
-	echo "error: iTunes is not running"
-	exit
-fi
-
-# find the path to library
-library_path=`osascript -e "
-	tell application \"iTunes\"
-		set loc to get location of track 1 of library playlist 1
-		loc
-	end tell" | sed 's/^.*:Users/:Users/;s/:/\//g;s/^\(.*iTunes Music\).*/\1/'`
+get_itunes_info(){
+	# ensure itunes is running
+	itunes=`ps aux | grep -v grep | grep "/Applications/iTunes.app"`
+	if [ "$itunes" == "" ]; then
+		echo "opening iTunes.."
+		open /Applications/iTunes.app
+	fi
+	# find path to library on the filesystem
+	library_path=`osascript -e "
+		tell application \"iTunes\"
+			set loc to get location of track 1 of library playlist 1
+			loc
+		end tell" | sed 's/^.*:Users/:Users/;s/:/\//g;s/^\(.*iTunes Music\).*/\1/'`
+}
 
 get_tracks_count(){
 	echo `osascript -e "
@@ -99,8 +97,11 @@ library_overview(){
 	echo "------"
 	echo "Filesystem overview"
 	echo "------"
+	echo -n "please wait.."
 	total_size=`du -sh "$library_path"`
-	echo -e "$total_size"
+	echo -ne "\r              "
+	echo -e "\r$total_size"
+
 	directories_count=`find "$library_path" -d -maxdepth 4 | wc -l | tr -d ' '`
 	echo -e "$directories_count \tdirectories" 
 
@@ -444,22 +445,36 @@ copy_tracks() {
 	path=""
 	try=0
 
-	while [ ! -d "$path" ] && [ $try -lt 3 ]; do
-		echo -n "Enter path to copy to: "
+	if [ -z $2 ]; then
 
-		read path
-
-		if [ ! -d "$path" ]; then
-			echo "invalid path!"
-			try=$[ $try + 1 ]
-		fi
-	done
+		while [ ! -d "$path" ] && [ $try -lt 3 ]; do
+			echo -n "Enter path to copy to: "
+	
+			read path
+	
+			if [ ! -d "$path" ]; then
+				echo "invalid path!"
+				try=$[ $try + 1 ]
+			fi
+		done
+	else 
+		path=$2
+	fi
 
 	if [ -d "$path" ]; then
 
-		echo -n "Copy by [g]enre, [a]rtist, [A]ll: "
+		if [ "$1" != "--all" ]; then
 
-		read answer_copytype
+			echo -n "Copy by [g]enre, [a]rtist, [A]ll: "
+
+			read answer_copytype
+
+		else
+			answer_copytype=$1
+			if [ "$answer_copytype" == "--all" ]; then
+				answer_copytype="A"
+			fi
+		fi
 
 		id_list=''
 
@@ -577,6 +592,39 @@ copy_tracks() {
 		fi
 	fi
 }
+
+show_help(){
+	echo -e "Usage:\titunes-utils.sh [action] ...";
+	echo -e "\titunes-utils.sh [option] [path] ...";
+	echo -e "Options:"
+	echo -e "\t--help"
+	echo -e "\t--copy"
+	echo -e "\t--all"
+}
+
+copy_tracks_cli(){
+	if [ -z $1 ]; then
+		show_help
+	else 
+		if [ "$1" == "--all" ] && [ "$2" != "" ] ; then
+			copy_tracks "$1" "$2"
+		else 
+			echo "error: invalid path!"
+			echo
+			show_help
+		fi	
+	fi
+}
+
+# check for arguments
+if [ $# != 0 ]; then 
+	case "$1" in
+		"--help") show_help ;;
+		"--copy") copy_tracks_cli $2 $3 ;;
+		*) ;;
+	esac
+	exit
+fi
 
 while : ; do
 	clear
